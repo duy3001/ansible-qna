@@ -10,21 +10,21 @@ This project includes:
 
 ## Directory Structure
 
-`
+```text
 ansible/
- hosts.ini                 # Inventory file
- site.yml                  # Main playbook
- group_vars/
-    all.yml               # Global variables
- host_vars/
-    master_node.yml       # Master node specific variables
-    worker_node_1.yml     # Worker node 1 specific variables
-    worker_node_ai.yml    # Worker node AI specific variables
- roles/
-     k3s/                  # K3s installation and configuration
-     k3s-manifests/        # Kubernetes manifests deployment
-     k3s-prereq/          # Prerequisites installation
-`
+├── hosts.ini                 # Inventory file
+├── site.yml                  # Main playbook
+├── group_vars/
+│   └── all.yml               # Global variables
+├── host_vars/
+│   ├── master_node.yml       # Master node specific variables
+│   ├── worker_node_1.yml     # Worker node 1 specific variables
+│   └── worker_node_ai.yml    # Worker node AI specific variables
+└── roles/
+    ├── k3s/                  # K3s installation and configuration
+    ├── k3s-manifests/        # Kubernetes manifests deployment
+    └── k3s-prereq/           # Prerequisites installation
+
 
 ## System Requirements
 
