@@ -1,0 +1,21 @@
+---
+# =====================================================
+# Main Task File for k3s Role
+# =====================================================
+# This file orchestrates the K3s installation process
+# Tasks are executed in order: common -> master -> worker -> worker_label
+
+# Common tasks: Applied to all nodes (master and worker)
+# Includes: disabling swap, installing required packages
+- import_tasks: common.yml
+
+# Master tasks: Applied only to master node
+# Includes: installing K3s server, generating node token
+- import_tasks: master.yml
+
+# Worker tasks: Applied only to worker nodes
+# Includes: installing K3s agent, joining cluster
+- import_tasks: worker.yml
+
+# Worker label tasks: Labels worker nodes for scheduling
+- import_tasks: worker_label.yml

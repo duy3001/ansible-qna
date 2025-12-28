@@ -1,0 +1,17 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: qna-db-migrator
+  namespace: qna
+spec:
+  template:
+    spec:
+      nodeSelector:
+        role: core
+      restartPolicy: Never
+      containers:
+      - name: migrator
+        image: nmthanh31/finalproject-migrator:latest
+        env:
+        - name: ConnectionStrings__DefaultConnection
+          value: "Server=db,1433;Database=QnA;User Id=sa;Password=Sa123456!;TrustServerCertificate=True;"

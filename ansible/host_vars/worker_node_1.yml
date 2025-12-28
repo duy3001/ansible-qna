@@ -1,0 +1,18 @@
+# =====================================================
+# Worker Node 1 Variables
+# =====================================================
+# Host-specific variables for worker node 1
+# These variables override or supplement group_vars/all.yml
+
+# SSH user for connecting to the worker node
+ansible_user: feyd ## Change to your own username
+
+# K3s node name for this worker
+# This name will be used when the worker joins the cluster
+k3s_node_name: worker-node-1
+
+# Kubernetes labels to apply to this worker node
+# Labels can be used for pod scheduling with nodeSelector or nodeAffinity
+# Example: role=core can be used to schedule core services on this node
+k3s_node_labels:
+  role: core

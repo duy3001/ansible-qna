@@ -1,0 +1,199 @@
+---
+# =====================================================
+# Apply Kubernetes Manifests
+# =====================================================
+# This playbook applies all Kubernetes manifests for the QnA application
+# in the correct order: namespace -> SQL Server -> migration -> backend -> frontend
+# Each component waits for the previous one to be ready before proceeding
+
+- block:
+
+    # =====================================================
+    # Namespace
+    # =====================================================
+    # Creates the Kubernetes namespace for the application
+    # All resources will be deployed in this namespace
+    - name: Apply namespace
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('file', role_path + '/files/namespace.yaml') }}"
+        kubeconfig: /etc/rancher/k3s/k3s.yaml
+
+    # =====================================================
+    # SQL Server (StatefulSet)
+    # =====================================================
+    # Deploys SQL Server as a StatefulSet for persistent database storage
+    # StatefulSet ensures stable network identity and persistent storage
+    - name: Apply sqlserver StatefulSet
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('file', role_path + '/files/sqlserver.yaml') }}"
+        kubeconfig: /etc/rancher/k3s/k3s.yaml
+
+    # =====================================================
+    # Qdrant (StatefulSet)
+    # =====================================================
+    # Deploys Qdrant vector database for AI model storage
+    - name: Apply qdrant StatefulSet
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('file', role_path + '/files/qdrant.yaml') }}"
+        kubeconfig: /etc/rancher/k3s/k3s.yaml
+
+    # -----------------------------------------------------
+    # Wait for Databases to be ready
+    # -----------------------------------------------------
+    # Waits indefinitely until all SQL Server replicas are ready
+    - name: Wait indefinitely for sqlserver StatefulSet to be ready
+      kubernetes.core.k8s_info:
+        kind: StatefulSet
+        namespace: "{{ k8s_namespace }}"
+        name: sqlserver
+        kubeconfig: /etc/rancher/k3s/k3s.yaml
+      register: sqlserver_ss
+      until: >
+        (sqlserver_ss.resources | default([])) | length > 0 and
+        (sqlserver_ss.resources[0].status.readyReplicas | default(0))
+        ==
+        (sqlserver_ss.resources[0].spec.replicas | default(0))
+      retries: 999999
+      delay: 10
+      ignore_errors: true
+      failed_when: false
+      changed_when: false
+
+    # Waits indefinitely until all Qdrant replicas are ready
+    - name: Wait indefinitely for qdrant StatefulSet to be ready
+      kubernetes.core.k8s_info:
+        kind: StatefulSet
+        namespace: "{{ k8s_namespace }}"
+        name: qdrant
+        kubeconfig: /etc/rancher/k3s/k3s.yaml
+      register: qdrant_ss
+      until: >
+        (qdrant_ss.resources | default([])) | length > 0 and
+        (qdrant_ss.resources[0].status.readyReplicas | default(0))
+        ==
+        (qdrant_ss.resources[0].spec.replicas | default(0))
+      retries: 999999
+      delay: 10
+      ignore_errors: true
+      failed_when: false
+      changed_when: false
+
+    # Logs the current status of SQL Server StatefulSet for monitoring
+    - name: Log sqlserver StatefulSet status
+      debug:
+        msg: >-
+          Waiting for SQL Server...
+          Replicas={{ sqlserver_ss.resources[0].status.replicas | default(0) }},
+          ReadyReplicas={{ sqlserver_ss.resources[0].status.readyReplicas | default(0) }}
+      when: sqlserver_ss.resources | default([]) | length > 0
+
+    # =====================================================
+    # Migration Job
+    # =====================================================
+    # Runs database migration job to set up the database schema
+    - name: Apply migration job
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('file', role_path + '/files/migration.yaml') }}"
+        kubeconfig: /etc/rancher/k3s/k3s.yaml
+
+    # Waits indefinitely for the migration job to complete successfully
+    - name: Wait indefinitely for migration job to complete
+      kubernetes.core.k8s_info:
+        kind: Job
+        namespace: "{{ k8s_namespace }}"
+        name: qna-db-migrator
+        kubeconfig: /etc/rancher/k3s/k3s.yaml
+      register: migration_job
+      until: >
+        (migration_job.resources | default([])) | length > 0 and
+        (migration_job.resources[0].status.succeeded | default(0) | int) > 0
+      failed_when: false
+      ignore_errors: true
+      changed_when: false
+      retries: 999999
+      delay: 10
+
+    # Logs the migration job status for monitoring progress
+    - name: Log migration job status
+      debug:
+        msg: >-
+          Waiting for migration job...
+          Succeeded={{ migration_job.resources[0].status.succeeded | default(0) }},
+          Failed={{ migration_job.resources[0].status.failed | default(0) }}
+      when: migration_job.resources | default([]) | length > 0
+
+    # =====================================================
+    # Backend
+    # =====================================================
+    # Deploys the backend application as a Kubernetes Deployment
+    - name: Apply backend
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('file', role_path + '/files/be.yaml') }}"
+        kubeconfig: /etc/rancher/k3s/k3s.yaml
+
+    # Waits indefinitely for all backend replicas to be ready
+    - name: Wait indefinitely for backend Deployment to be ready
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        namespace: "{{ k8s_namespace }}"
+        name: qna-backend
+        kubeconfig: /etc/rancher/k3s/k3s.yaml
+      register: be_deploy
+      until: >
+        (be_deploy.resources | default([])) | length > 0 and
+        (be_deploy.resources[0].status.readyReplicas | default(0))
+        ==
+        (be_deploy.resources[0].status.replicas | default(0))
+      retries: 999999
+      delay: 10
+      ignore_errors: true
+      failed_when: false
+      changed_when: false
+
+    # Logs the backend deployment status for monitoring
+    - name: Log backend deployment status
+      debug:
+        msg: >-
+          Waiting for backend...
+          Replicas={{ be_deploy.resources[0].status.replicas | default(0) }},
+          ReadyReplicas={{ be_deploy.resources[0].status.readyReplicas | default(0) }}
+      when: be_deploy.resources | default([]) | length > 0
+
+    # =====================================================
+    # Frontend
+    # =====================================================
+    # Deploys the frontend application
+    - name: Apply frontend
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('file', role_path + '/files/fe.yaml') }}"
+        kubeconfig: /etc/rancher/k3s/k3s.yaml
+
+    # =====================================================
+    # AI Model
+    # =====================================================
+    # Deploys the AI model
+    - name: Apply AI model
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('file', role_path + '/files/ai-model.yaml') }}"
+        kubeconfig: /etc/rancher/k3s/k3s.yaml
+
+  # -----------------------------------------------------
+  # Use Python from virtualenv
+  # -----------------------------------------------------
+  # Specifies the Python interpreter from the virtual environment
+  vars:
+    ansible_python_interpreter: /opt/ansible-k8s-venv/bin/python
+
+  # -----------------------------------------------------
+  # Only run on master node
+  # -----------------------------------------------------
+  # This playbook should only execute on the master node
+  # as it requires access to the kubeconfig file
+  when: inventory_hostname == groups['master'][0]

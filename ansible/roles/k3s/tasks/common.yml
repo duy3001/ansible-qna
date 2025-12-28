@@ -1,0 +1,27 @@
+---
+# =====================================================
+# Common Tasks for All Nodes
+# =====================================================
+# These tasks are executed on both master and worker nodes
+# before installing K3s
+
+# Disables swap permanently by removing swap entries from /etc/fstab
+# Kubernetes requires swap to be disabled for proper operation
+- name: Disable swap permanently
+  lineinfile:
+    path: /etc/fstab
+    regexp: '^\s*[^#].*\sswap\s'
+    state: absent
+  notify: swapoff
+
+# Disables swap immediately without requiring reboot
+- name: Disable swap immediately
+  command: swapoff -a
+
+# Installs required system packages
+# curl: Needed to download K3s installation script
+- name: Install required packages
+  package:
+    name:
+      - curl
+    state: present

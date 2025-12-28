@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qna-backend
+  namespace: qna
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qna-backend
+  template:
+    metadata:
+      labels:
+        app: qna-backend
+    spec:
+      nodeSelector:
+        role: core
+      containers:
+      - name: backend
+        image: nmthanh31/finalproject-backend:latest
+        ports:
+        - containerPort: 7006
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: ASPNETCORE_URLS
+          value: "http://+:7006"
+        - name: ConnectionStrings__DefaultConnection
+          value: "Server=db,1433;Database=QnA;User Id=sa;Password=Sa123456!;TrustServerCertificate=True;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qna-backend
+  namespace: qna
+spec:
+  selector:
+    app: qna-backend
+  ports:
+  - port: 7006
+    targetPort: 7006
+    protocol: TCP
+  type: ClusterIP

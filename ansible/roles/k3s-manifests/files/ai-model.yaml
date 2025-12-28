@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-model
+  namespace: qna
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-model
+  template:
+    metadata:
+      labels:
+        app: ai-model
+    spec:
+      nodeSelector:
+        role: ai
+      containers:
+      - name: ai-model
+        image: nginx:latest # Placeholder image, replace with your AI model image
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+          requests:
+            cpu: "1"
+            memory: "2Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ai-model
+  namespace: qna
+spec:
+  ports:
+  - port: 80
+  selector:
+    app: ai-model
+

@@ -1,0 +1,11 @@
+# =====================================================
+# Master Node Variables
+# =====================================================
+# Host-specific variables for the master node
+# These variables override or supplement group_vars/all.yml
+
+# SSH user for connecting to the master node
+ansible_user: feyd ## Change to your own username
+
+# Node name identifier for the master node
+node_name: master-node

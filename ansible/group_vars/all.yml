@@ -1,0 +1,23 @@
+# =====================================================
+# Global Variables for All Hosts
+# =====================================================
+# These variables are applied to all hosts in the inventory
+
+# K3s version to install
+# Format: v<major>.<minor>.<patch>+k3s<build>
+k3s_version: v1.34.2+k3s1
+
+# Ansible privilege escalation settings
+# become: true enables sudo/root access for tasks
+ansible_become: true
+ansible_become_method: sudo
+
+# Kubernetes namespace for the application
+# All application resources will be deployed in this namespace
+k8s_namespace: qna
+
+# Kubernetes wait configuration
+# Number of retries when waiting for resources to be ready
+k8s_wait_retries: 20
+# Delay in seconds between retry attempts
+k8s_wait_delay: 15
