@@ -24,7 +24,7 @@ ansible/
     ├── k3s/                  # K3s installation and configuration
     ├── k3s-manifests/        # Kubernetes manifests deployment
     └── k3s-prereq/           # Prerequisites installation
-
+```
 
 ## System Requirements
 
