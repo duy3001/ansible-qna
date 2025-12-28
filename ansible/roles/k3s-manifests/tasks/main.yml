@@ -1,0 +1,8 @@
+---
+# =====================================================
+# Main Task File for k3s-manifests Role
+# =====================================================
+# This file imports the apply.yml task file which contains
+# all the tasks for applying Kubernetes manifests
+
+- import_tasks: apply.yml

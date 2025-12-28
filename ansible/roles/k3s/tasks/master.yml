@@ -1,0 +1,42 @@
+---
+# =====================================================
+# Master Node Tasks
+# =====================================================
+# These tasks are executed only on the master node
+# They install K3s server and prepare the cluster
+
+# Installs K3s server (control plane) on the master node
+# creates: Prevents re-installation if K3s is already installed
+- name: Install K3s master
+  shell: |
+    curl -sfL https://get.k3s.io | \
+    INSTALL_K3S_VERSION="{{ k3s_version }}" sh -s - \
+    server --cluster-init --write-kubeconfig-mode 644
+  args:
+    executable: /bin/bash
+    creates: /etc/systemd/system/k3s.service
+  when: inventory_hostname == groups['master'][0]
+
+# Waits for K3s service to become active
+- name: Wait for K3s server to start
+  shell: systemctl is-active k3s
+  register: k3s_status
+  retries: 10
+  delay: 3
+  until: k3s_status.stdout.strip() == "active"
+  when: inventory_hostname == groups['master'][0]
+
+# Reads the node token from the master node
+# This token is required for worker nodes to join the cluster
+- name: Read node token from master
+  slurp:
+    src: /var/lib/rancher/k3s/server/node-token
+  register: node_token_raw
+  when: inventory_hostname == groups['master'][0]
+
+# Decodes and saves the node token as a fact
+# This makes the token available to worker nodes during their installation
+- name: Save token fact for workers
+  set_fact:
+    k3s_token: "{{ node_token_raw.content | b64decode | trim }}"
+  when: inventory_hostname == groups['master'][0]

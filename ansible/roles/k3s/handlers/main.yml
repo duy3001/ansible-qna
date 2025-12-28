@@ -1,0 +1,12 @@
+---
+# =====================================================
+# Handlers
+# =====================================================
+# Handlers are tasks that run only when notified by other tasks
+# They are typically used for service restarts or configuration reloads
+
+# Handler to disable swap
+# This is triggered when swap entries are removed from /etc/fstab
+# Ensures swap is disabled immediately without requiring a reboot
+- name: swapoff
+  command: swapoff -a

@@ -1,0 +1,41 @@
+---
+# =====================================================
+# Worker Node Tasks
+# =====================================================
+# These tasks are executed only on worker nodes
+# They install K3s agent and join the cluster
+
+# Retrieves the node token from the master node
+# This token was generated during master installation
+# and is required for worker nodes to authenticate and join the cluster
+- name: Share token with all nodes
+  set_fact:
+    k3s_token: "{{ hostvars[groups['master'][0]]['k3s_token'] }}"
+  when: inventory_hostname in groups['worker']
+
+# Installs K3s agent (worker) on worker nodes
+# K3S_URL: Points to the master node's API server
+# K3S_TOKEN: Authentication token from master
+# --node-name: Sets a custom name for the worker node
+# creates: Prevents re-installation if agent is already installed
+- name: Install K3s worker
+  shell: |
+    curl -sfL https://get.k3s.io | \
+    INSTALL_K3S_VERSION="{{ k3s_version }}" \
+    K3S_URL="https://{{ hostvars[groups['master'][0]].ansible_host }}:6443" \
+    K3S_TOKEN="{{ k3s_token }}" \
+    INSTALL_K3S_EXEC="--node-name {{ k3s_node_name }}" \
+    sh -
+  args:
+    executable: /bin/bash
+    creates: /etc/systemd/system/k3s-agent.service
+  when: inventory_hostname in groups['worker']
+
+# Waits for the K3s agent service to become active
+- name: Wait for worker to join
+  shell: systemctl is-active k3s-agent
+  register: agent_status
+  retries: 10
+  delay: 3
+  until: agent_status.stdout.strip() == "active"
+  when: inventory_hostname in groups['worker']

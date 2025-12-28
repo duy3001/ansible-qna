@@ -1,0 +1,16 @@
+# =====================================================
+# Worker Node AI Variables
+# =====================================================
+# Host-specific variables for the AI and Qdrant worker node
+
+# SSH user for connecting to the worker node
+ansible_user: feyd ## Change to your own username
+
+# K3s node name for this worker
+k3s_node_name: worker-node-ai
+
+# Kubernetes labels to apply to this worker node
+# We use 'role: ai' to target this node for AI and Qdrant workloads
+k3s_node_labels:
+  role: ai
+

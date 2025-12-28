@@ -1,0 +1,29 @@
+# =====================================================
+# Worker Node Labeling Tasks
+# =====================================================
+# These tasks label worker nodes with custom labels
+# Labels are used for pod scheduling and node selection
+
+# Switches to the Python interpreter from the virtual environment
+# This is required because kubernetes.core modules need the Kubernetes Python library
+- name: Switch ansible python to k8s venv (for labeling)
+  set_fact:
+    ansible_python_interpreter: /opt/ansible-k8s-venv/bin/python
+  when: inventory_hostname == groups['master'][0]
+
+# Applies custom labels to worker nodes
+# Labels are defined in host_vars for each worker node
+# Labels can be used for node selection in pod scheduling
+- name: Label worker nodes
+  kubernetes.core.k8s:
+    api_version: v1
+    kind: Node
+    name: "{{ hostvars[item].k3s_node_name }}"
+    definition:
+      metadata:
+        labels: "{{ hostvars[item].k3s_node_labels }}"
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+  loop: "{{ groups['worker'] }}"
+  when:
+    - inventory_hostname == groups['master'][0]
+    - hostvars[item].k3s_node_labels is defined

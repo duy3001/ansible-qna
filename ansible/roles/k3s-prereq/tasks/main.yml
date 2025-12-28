@@ -1,0 +1,40 @@
+---
+# =====================================================
+# Prerequisites Role - Main Tasks
+# =====================================================
+# This role prepares the master node for Kubernetes operations
+# by setting up a Python virtual environment with required libraries
+
+# Installs Python virtual environment support packages
+# python3-venv: Provides venv module for creating virtual environments
+# python3-pip: Provides pip for installing Python packages
+- name: Install python venv support
+  apt:
+    name:
+      - python3-venv
+      - python3-pip
+    state: present
+    update_cache: true
+  when: inventory_hostname == groups['master'][0]
+
+# Creates a Python virtual environment at /opt/ansible-k8s-venv
+# This isolated environment will contain Kubernetes Python libraries
+# creates: Prevents recreation if the venv already exists
+- name: Create virtualenv for k8s
+  command: python3 -m venv /opt/ansible-k8s-venv
+  args:
+    creates: /opt/ansible-k8s-venv
+  when: inventory_hostname == groups['master'][0]
+
+# Installs Kubernetes Python libraries in the virtual environment
+# kubernetes: Official Kubernetes Python client library
+# openshift: OpenShift Python client (includes Kubernetes support)
+# These libraries are required by Ansible's kubernetes.core modules
+- name: Install kubernetes python libs in venv
+  pip:
+    name:
+      - kubernetes
+      - openshift
+    virtualenv: /opt/ansible-k8s-venv
+    virtualenv_command: python3 -m venv
+  when: inventory_hostname == groups['master'][0]

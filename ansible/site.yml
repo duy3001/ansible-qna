@@ -1,0 +1,38 @@
+---
+# =====================================================
+# Main Playbook - Site.yml
+# =====================================================
+# This file is the main entry point of the Ansible playbook
+# Executes the deployment steps for K3s cluster and application in order
+
+# =====================================================
+# Step 1: Environment Preparation (Prerequisites)
+# =====================================================
+# Runs on master node to install required dependencies
+# such as Python venv and Kubernetes libraries
+- hosts: master
+  become: true
+  gather_facts: false
+  roles:
+    - k3s-prereq
+
+# =====================================================
+# Step 2: Deploy K3s Cluster
+# =====================================================
+# Use tag 'k3s' to run separately: ansible-playbook site.yml --tags k3s
+- name: Deploy K3s cluster
+  hosts: all
+  become: true
+  roles:
+    - { role: k3s, tags: ['k3s'] }
+
+# =====================================================
+# Step 3: Deploy Application Manifests
+# =====================================================
+# Applies Kubernetes manifests for QnA application
+# Use tag 'manifests' to run separately: ansible-playbook site.yml --tags manifests
+- name: Deploy application manifests
+  hosts: all
+  become: true
+  roles:
+    - { role: k3s-manifests, tags: ['manifests'] }
