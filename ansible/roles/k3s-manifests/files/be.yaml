@@ -1,43 +1,74 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: qna-backend
+  name: webapi
   namespace: qna
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: qna-backend
+      app: webapi
   template:
     metadata:
       labels:
-        app: qna-backend
+        app: webapi
     spec:
       nodeSelector:
         role: core
       containers:
-      - name: backend
-        image: nmthanh31/finalproject-backend:latest
+      - name: webapi
+        image: lacet301/qna-internal-webapi:latest
         ports:
-        - containerPort: 7006
+        - containerPort: 8080
         env:
         - name: ASPNETCORE_ENVIRONMENT
-          value: "Production"
+          value: "Development"
         - name: ASPNETCORE_URLS
-          value: "http://+:7006"
+          value: "http://+:8080"
         - name: ConnectionStrings__DefaultConnection
-          value: "Server=db,1433;Database=QnA;User Id=sa;Password=Sa123456!;TrustServerCertificate=True;"
+          value: "Server=sqlserver,1433;Database=QnA_Internal;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;Encrypt=False"
+
+        - name: AIService__BaseUrl
+          value: "http://ai-svc:8000"
+        - name: Qdrant__BaseUrl
+          value: "http://qdrant:6333"
+        - name: Qdrant__Collection
+          value: "kb"
+        - name: Qdrant__VectorName
+          value: "dense_v1"
+        - name: Qdrant__TopK
+          value: "8"
+
+        - name: Email__Smtp__Host
+          value: "mailpit"
+        - name: Email__Smtp__Port
+          value: "1025"
+        - name: Email__Smtp__UseSsl
+          value: "false"
+        - name: Email__From
+          value: "no-reply@qna.local"
+
+        readinessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 20
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: qna-backend
+  name: webapi
   namespace: qna
 spec:
   selector:
-    app: qna-backend
+    app: webapi
   ports:
-  - port: 7006
-    targetPort: 7006
+  - port: 8080
+    targetPort: 8080
     protocol: TCP
-  type: ClusterIP
+  type: NodePort

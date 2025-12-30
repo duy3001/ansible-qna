@@ -4,7 +4,7 @@ metadata:
   name: sqlserver
   namespace: qna
 spec:
-  serviceName: db
+  serviceName: sqlserver
   replicas: 1
   selector:
     matchLabels:
@@ -22,21 +22,32 @@ spec:
         runAsGroup: 10001
       containers:
       - name: sqlserver
-        image: mcr.microsoft.com/mssql/server:2019-latest
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        ports:
+        - containerPort: 1433
         env:
         - name: ACCEPT_EULA
           value: "Y"
         - name: MSSQL_SA_PASSWORD
-          value: "Sa123456!"
+          value: "YourStrong!Passw0rd"
         volumeMounts:
         - name: sql-data
           mountPath: /var/opt/mssql
+        readinessProbe:
+          tcpSocket:
+            port: 1433
+          initialDelaySeconds: 20
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: 1433
+          initialDelaySeconds: 60
+          periodSeconds: 20
   volumeClaimTemplates:
   - metadata:
       name: sql-data
     spec:
-      accessModes:
-      - ReadWriteOnce
+      accessModes: ["ReadWriteOnce"]
       storageClassName: local-path
       resources:
         requests:
@@ -45,7 +56,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: db
+  name: sqlserver
   namespace: qna
 spec:
   selector:
@@ -53,3 +64,4 @@ spec:
   ports:
   - port: 1433
     targetPort: 1433
+  type: ClusterIP

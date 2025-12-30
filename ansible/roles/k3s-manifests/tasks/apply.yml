@@ -31,10 +31,10 @@
         kubeconfig: /etc/rancher/k3s/k3s.yaml
 
     # =====================================================
-    # Qdrant (StatefulSet)
+    # Qdrant (Deployment)
     # =====================================================
     # Deploys Qdrant vector database for AI model storage
-    - name: Apply qdrant StatefulSet
+    - name: Apply qdrant Deployment
       kubernetes.core.k8s:
         state: present
         definition: "{{ lookup('file', role_path + '/files/qdrant.yaml') }}"
@@ -63,18 +63,18 @@
       changed_when: false
 
     # Waits indefinitely until all Qdrant replicas are ready
-    - name: Wait indefinitely for qdrant StatefulSet to be ready
+    - name: Wait indefinitely for qdrant Deployment to be ready
       kubernetes.core.k8s_info:
-        kind: StatefulSet
+        kind: Deployment
         namespace: "{{ k8s_namespace }}"
         name: qdrant
         kubeconfig: /etc/rancher/k3s/k3s.yaml
-      register: qdrant_ss
+      register: qdrant_deploy
       until: >
-        (qdrant_ss.resources | default([])) | length > 0 and
-        (qdrant_ss.resources[0].status.readyReplicas | default(0))
+        (qdrant_deploy.resources | default([])) | length > 0 and
+        (qdrant_deploy.resources[0].status.readyReplicas | default(0))
         ==
-        (qdrant_ss.resources[0].spec.replicas | default(0))
+        (qdrant_deploy.resources[0].status.replicas | default(0))
       retries: 999999
       delay: 10
       ignore_errors: true
@@ -89,6 +89,15 @@
           Replicas={{ sqlserver_ss.resources[0].status.replicas | default(0) }},
           ReadyReplicas={{ sqlserver_ss.resources[0].status.readyReplicas | default(0) }}
       when: sqlserver_ss.resources | default([]) | length > 0
+
+    # Logs the current status of Qdrant Deployment for monitoring
+    - name: Log qdrant Deployment status
+      debug:
+        msg: >-
+          Waiting for Qdrant...
+          Replicas={{ qdrant_deploy.resources[0].status.replicas | default(0) }},
+          ReadyReplicas={{ qdrant_deploy.resources[0].status.readyReplicas | default(0) }}
+      when: qdrant_deploy.resources | default([]) | length > 0
 
     # =====================================================
     # Migration Job
@@ -174,6 +183,34 @@
         definition: "{{ lookup('file', role_path + '/files/fe.yaml') }}"
         kubeconfig: /etc/rancher/k3s/k3s.yaml
 
+    # Waits indefinitely for all frontend replicas to be ready
+    - name: Wait indefinitely for frontend Deployment to be ready
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        namespace: "{{ k8s_namespace }}"
+        name: fe-test
+        kubeconfig: /etc/rancher/k3s/k3s.yaml
+      register: fe_deploy
+      until: >
+        (fe_deploy.resources | default([])) | length > 0 and
+        (fe_deploy.resources[0].status.readyReplicas | default(0))
+        ==
+        (fe_deploy.resources[0].status.replicas | default(0))
+      retries: 999999
+      delay: 10
+      ignore_errors: true
+      failed_when: false
+      changed_when: false
+
+    # Logs the frontend deployment status for monitoring
+    - name: Log frontend deployment status
+      debug:
+        msg: >-
+          Waiting for frontend...
+          Replicas={{ fe_deploy.resources[0].status.replicas | default(0) }},
+          ReadyReplicas={{ fe_deploy.resources[0].status.readyReplicas | default(0) }}
+      when: fe_deploy.resources | default([]) | length > 0
+
     # =====================================================
     # AI Model
     # =====================================================
@@ -183,6 +220,34 @@
         state: present
         definition: "{{ lookup('file', role_path + '/files/ai-model.yaml') }}"
         kubeconfig: /etc/rancher/k3s/k3s.yaml
+
+    # Waits indefinitely for all AI model replicas to be ready
+    - name: Wait indefinitely for AI model Deployment to be ready
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        namespace: "{{ k8s_namespace }}"
+        name: ai-svc
+        kubeconfig: /etc/rancher/k3s/k3s.yaml
+      register: ai_deploy
+      until: >
+        (ai_deploy.resources | default([])) | length > 0 and
+        (ai_deploy.resources[0].status.readyReplicas | default(0))
+        ==
+        (ai_deploy.resources[0].status.replicas | default(0))
+      retries: 999999
+      delay: 10
+      ignore_errors: true
+      failed_when: false
+      changed_when: false
+
+    # Logs the AI model deployment status for monitoring
+    - name: Log AI model deployment status
+      debug:
+        msg: >-
+          Waiting for AI model...
+          Replicas={{ ai_deploy.resources[0].status.replicas | default(0) }},
+          ReadyReplicas={{ ai_deploy.resources[0].status.readyReplicas | default(0) }}
+      when: ai_deploy.resources | default([]) | length > 0
 
   # -----------------------------------------------------
   # Use Python from virtualenv
