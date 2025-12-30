@@ -4,14 +4,17 @@ metadata:
   name: qna-db-migrator
   namespace: qna
 spec:
+  backoffLimit: 1
   template:
     spec:
+      restartPolicy: Never
       nodeSelector:
         role: core
-      restartPolicy: Never
       containers:
       - name: migrator
-        image: nmthanh31/finalproject-migrator:latest
+        image: lacet301/qna-internal-migrator:latest
+        imagePullPolicy: Always
+        command: ["/app/migrate"]
         env:
         - name: ConnectionStrings__DefaultConnection
-          value: "Server=db,1433;Database=QnA;User Id=sa;Password=Sa123456!;TrustServerCertificate=True;"
+          value: "Server=sqlserver,1433;Database=QnA_Internal;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;Encrypt=False"
